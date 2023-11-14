@@ -110,8 +110,9 @@ System::String^ ZoneExporter::get_eobj_sgb_path(System::UInt32 eobj_id)
         }
     }
     System::String^ ret;
-    eobj_sgb_paths->TryGetValue(eobj_id, ret);
-    return ret;
+    if (eobj_sgb_paths->TryGetValue(eobj_id, ret))
+      return ret;
+    return System::String::Empty;
 }
 
 System::String^ ZoneExporter::get_eobj_name(System::UInt32 eobj_id)
@@ -125,8 +126,9 @@ System::String^ ZoneExporter::get_eobj_name(System::UInt32 eobj_id)
                 eobj_names->Add(row->Row, row->ReadColumn<System::String^>(0));
     }
     System::String^ ret;
-    eobj_names->TryGetValue(eobj_id, ret);
-    return ret;
+    if (eobj_names->TryGetValue(eobj_id, ret))
+      return ret;
+    return System::String::Empty;
 }
 
 void ZoneExporter::process_layer(Lumina::Data::Parsing::Layer::LayerCommon::Layer^ layer, FbxNode* parent_node)
@@ -233,7 +235,7 @@ void ZoneExporter::process_layer(Lumina::Data::Parsing::Layer::LayerCommon::Laye
             auto shared_path = get_eobj_sgb_path(event_object->ParentData.BaseId);
 
             // read the eobj name from exd
-            object_node->SetName(Util::get_std_str(get_eobj_name(event_object->ParentData.BaseId)).c_str());
+            object_node->SetName(Util::get_std_str(object->Name + "_" + get_eobj_name(event_object->ParentData.BaseId) + "_eobj").c_str());
 
             if (shared_path != nullptr)
             {
@@ -268,6 +270,7 @@ void ZoneExporter::process_layer(Lumina::Data::Parsing::Layer::LayerCommon::Laye
                     process_layer(sgbLayer, object_node);
                 }
             }
+            object_node->SetName(Util::get_std_str(shared_path->Substring(shared_path->LastIndexOf('/') + 1) + "_sg").c_str());
             layer_node->AddChild(object_node);
             System::Console::WriteLine(shared_path);
         }
@@ -493,7 +496,7 @@ bool ZoneExporter::create_material(Lumina::Models::Materials::Material^ mat, Fbx
     // thanks azurerain1
     for (auto& slot : textures)
     {
-        if (/*slot.second.size() > 1*/ false)
+        if (slot.second.size() > 1)
         {
             auto layered_texture = FbxLayeredTexture::Create(scene, (std_material_name + "_layered_texture_group").c_str());
             for (int i = 0; i < slot.second.size(); ++i)
